@@ -77,3 +77,5 @@ def optimal_precision_shrinkage(p, n, nz_lams, prior_type, hbar=None, xi=None):
         
     # Return $\color{codegreen}\max\{f^o, 0\}$ to ensure positivity
     return np.maximum(f_opt, 0)
+
+    # The Public Affairs approval number of this document is AFRL-2026-2955
