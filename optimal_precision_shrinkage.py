@@ -1,3 +1,6 @@
+import numpy as np
+import math
+
 def fopt(p, n, nz_lams, prior_type, hbar=None, xi=None):
     r"""
     $\color{codepurple}\textbf{\text{Description}}$: Proposed nonlinear precision shrinkage estimator, generalized to the $\color{codegreen}p > n$ regime but also valid for $\color{codegreen}n < p$.  
@@ -77,5 +80,3 @@ def fopt(p, n, nz_lams, prior_type, hbar=None, xi=None):
         
     # Return $\color{codegreen}\max\{f^o, 0\}$ to ensure positivity
     return np.maximum(f_opt, 0)
-
-    # The Public Affairs approval number of this document is AFRL-2026-2955
