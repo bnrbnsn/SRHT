@@ -1,4 +1,4 @@
-def optimal_precision_shrinkage(p, n, nz_lams, prior_type, hbar=None, xi=None):
+def fopt(p, n, nz_lams, prior_type, hbar=None, xi=None):
     r"""
     $\color{codepurple}\textbf{\text{Description}}$: Proposed nonlinear precision shrinkage estimator, generalized to the $\color{codegreen}p > n$ regime but also valid for $\color{codegreen}n < p$.  
     $\color{codepurple}\textbf{\text{Output}}$: (p x 1) array $\color{codegreen}f=\color{codepurple}f^o(\lambda_i)$ (f_opt) that approximately optimizes
