@@ -13,40 +13,33 @@ def run_simulation(pow_idx, nu=math.inf, signal_is_isotropic=True, num_trials=10
     tmax = 10000 # 1000 * num_trials 
     if signal_is_isotropic:
         if nu == math.inf:
-            mag = 9.75 # 10.5 # for sub-gaussian 
+            mag = 9.75 
         else:
-            mag = 13.75 # 14.5 # 12.5 # 16 # 10.5 # for heavy-tail
+            mag = 13.75 
     else: # for anisotropic signals (Omega not equal Id)
         if nu == math.inf:
-            mag = 9.75 # 12.5 # for (p, n) = (1000, 500)
+            mag = 9.75 
         else:
-            mag = 15 # 12.5 # 23.5
+            mag = 15 
     nSpikes = 40
 
     print(f"\n--- Running simulation for kappa=10^{pow_idx}, nu={nu}, true_iso={signal_is_isotropic},  trials={num_trials} ---")
     
     # Generate population covariance eigenvalues
     part1 = 10.0 ** (pow_idx / nSpikes * (nSpikes + 1 - np.arange(1, nSpikes + 1)))
-    #if pow_idx == 4: # ignore this conditional for now--original logic***
-        #part2 = 10.0 ** (1 / (nSpikes * (p - nSpikes)) * (p - nSpikes + 1 - np.arange(1, p - nSpikes + 1)))
-    if pow_idx == 0: # ignore this conditional for now--original logic***
+    if pow_idx == 0: # kappa = 0, identity-covariance case
         part2 = np.ones(p - nSpikes)
     else:
         part2 = 10.0 ** (1 / (nSpikes * (p - nSpikes - 1)) * (p - nSpikes - np.arange(1, p - nSpikes + 1)))
-        
-    #part2 = 10.0 ** (1 / (nSpikes * (p - nSpikes - 1)) * (p - nSpikes - np.arange(1, p - nSpikes + 1))) # more like paper definition***
     
     sigmavec = np.concatenate([part1, part2])
     sqrtSigma = np.diag(np.sqrt(sigmavec))
-    # SigmaSq = np.diag(sigmavec ** 2) # for minimax***
-    
+
     Z_iso = np.random.normal(size=(p, 2*p))
     V_iso, _, _ = np.linalg.svd(Z_iso)
-    #print(V_iso.shape)
-    #print(np.trace(V_iso.T @ V_iso))
     sqrtSigma = V_iso @ sqrtSigma
     
-    # 5% of tests have the signal
+    # 5% of tests will contain a ``signal''
     motion = np.zeros(tmax, dtype=bool)
     motion[int(0.95 * tmax):] = True
 
@@ -60,9 +53,9 @@ def run_simulation(pow_idx, nu=math.inf, signal_is_isotropic=True, num_trials=10
 
         # Correctly condition the noise tail behavior for the reference data
         if nu == math.inf:
-            trainS_white = np.random.uniform(-np.sqrt(3), np.sqrt(3), size=(p, n)) # sub-gaussian
+            trainS_white = np.random.uniform(-np.sqrt(3), np.sqrt(3), size=(p, n)) # sub-gaussian case
         else:
-            trainS_white = np.random.standard_t(nu, size=(p, n)) / np.sqrt(nu / (nu - 2)) # student-t
+            trainS_white = np.random.standard_t(nu, size=(p, n)) / np.sqrt(nu / (nu - 2)) # student-t case
         
         trainS = sqrtSigma @ trainS_white
         
@@ -93,10 +86,9 @@ def run_simulation(pow_idx, nu=math.inf, signal_is_isotropic=True, num_trials=10
         lwlam = np.flip(QIS_eigs_ascending)
         
         
-        # Proposed (Latimer-Robinson, isotropic version)
-        # uOus = np.diag(U.T @ (SigmaSq @ U)) # minimax***
-        uOus=np.ones(p) # isotropic***
-        inv_eigs_iso = fopt(p, n, nzlams, 'isotropic') # isotropic signal prior
+        # Proposed SRHT (isotropic version)
+        uOus=np.ones(p)
+        inv_eigs_iso = fopt(p, n, nzlams, 'isotropic')
         
         # Diagonal loading optimization via grid search (vectorized)
         if n >= p:
@@ -144,11 +136,8 @@ def run_simulation(pow_idx, nu=math.inf, signal_is_isotropic=True, num_trials=10
         # Fully vectorized test data generation (10,000 samples at once)
         if signal_is_isotropic:
             meanDiffs = np.random.normal(size=(p,tmax))
-            #meanDiffs = np.random.uniform(-np.sqrt(3), np.sqrt(3), size=(p, tmax)) 
         else:
             meanDiffs = sqrtSigma @ np.random.normal(size=(p,tmax))
-        # myvec = meanDiffs[:,np.size(meanDiffs, 1)-1]
-        # print(np.linalg.norm(myvec))
             
         if nu == math.inf:
             Z_white = np.random.uniform(-np.sqrt(3), np.sqrt(3), size=(p, tmax)) 
@@ -160,7 +149,6 @@ def run_simulation(pow_idx, nu=math.inf, signal_is_isotropic=True, num_trials=10
         # Add isotropic, normalized signal to the selected H1 indices
         meanDiffs_signal = meanDiffs[:, motion]
         meanDiffs_norms = np.linalg.norm(meanDiffs_signal, axis=0)
-        # Z[:, motion] += mag * (meanDiffs_signal / meanDiffs_norms)
         if signal_is_isotropic:
             Z[:, motion] += mag * meanDiffs_signal / np.sqrt(p)
         else:
@@ -177,7 +165,7 @@ def run_simulation(pow_idx, nu=math.inf, signal_is_isotropic=True, num_trials=10
         all_resLR.append( np.sum(Z_U * (inv_eigs_iso * Z_U), axis=0) )
         all_resLW.append( np.sum(Z_U * ((1.0 / lwlam)[:, None] * Z_U), axis=0) )
         all_resCWH.append( np.sum(Z * np.linalg.solve(chenShat, Z), axis=0) )
-        # "Bai" Detector.  Actually covariance-matched proposed detector
+        # "Bai" Detector.  Actually a misnomer: this is the covariance-matched proposed detector SRHT(Sigma)
         all_resBai.append( np.sum(Z_U * (inv_eigs_matched * Z_U), axis=0) )
 
         
@@ -185,7 +173,7 @@ def run_simulation(pow_idx, nu=math.inf, signal_is_isotropic=True, num_trials=10
             all_resDL.append( np.sum(Z_U * (DL_inv_eigs[:, None] * Z_U), axis=0) )
             all_resHot.append( np.sum(Z_U * ((1.0 / full_lams)[:, None] * Z_U), axis=0) )
             
-        # Bai Detector
+        # True Bai Detector -- deprecated in this version
         #BaiN = n
         #BaiNum = np.linalg.norm(Z, axis=0)**2 - np.sum(full_lams)
         #Bn2 = (BaiN**2 / ((BaiN + 2)*(BaiN - 1))) * np.sum(full_lams**2) - (1 / BaiN) * abs(np.sum(full_lams)**2)
@@ -309,9 +297,6 @@ def main():
         # Main Grid Figure
         num_rows = len(nus_to_run)
         num_cols = len(pow_configs)
-        # fig, axes = plt.subplots(nrows=num_rows, ncols=num_cols, figsize=(20, 5 * num_rows), squeeze=False)
-        # fig, axes = plt.subplots(nrows=num_rows, ncols=num_cols, figsize=(15, 4.5 * num_rows), squeeze=False)
-        # fig_top, axes_top = plt.subplots(nrows=1, ncols=num_cols, figsize=(15, 4.5), squeeze=False)
                 # Calculate figure height dynamically to control aspect ratios separately.
         # We provide a baseline height per row, plus a fixed amount of overhead 
         # padding (1.5 inches) for the large column titles and the bottom legend.
@@ -319,11 +304,6 @@ def main():
         
         fig, axes = plt.subplots(nrows=num_rows, ncols=num_cols, figsize=(15, fig_height), squeeze=False)
         fig_top, axes_top = plt.subplots(nrows=1, ncols=num_cols, figsize=(15, 5.7), squeeze=False)
- 
-        
-        
-        # Dedicated figure for the top row (Sub-Gaussian)
-        #fig_top, axes_top = plt.subplots(nrows=1, ncols=num_cols, figsize=(20, 5), squeeze=False)
         
         for row, nu in enumerate(nus_to_run):
             for col, pow_idx in enumerate(pow_configs):
@@ -342,7 +322,6 @@ def main():
                         # Proxy artist for the perfect legend entry (empty data, but labeled)
                         ax.plot([], [], linestyle=linestyle, marker=marker, color=color, linewidth=lw, 
             markersize=ms, markeredgewidth=mew, label=lbl, markerfacecolor=mfc, alpha=alpha) 
-            # linestyle='None' if lbl=='LW22' else linestyle,
 
                         ax.plot(roc_data[0], roc_data[1], linestyle=linestyle, color=color, linewidth=lw, alpha=alpha)
                         
@@ -355,13 +334,8 @@ def main():
                     add_curve(rocs['CWH'], '--', '^', '#D95319', 2, 12, 2, 'CWH11')
                     
                     add_curve(rocs['LW'], '--', '+', '#63D312', 3.25, 18, 3, 'LW22', 0.6) #, 'black', 'black')
-                    
-                    # deprecated
-                    ## add_curve(rocs['LW'], '--', 'None', '#63D312', 3.25, 18, 3, 'LW22') #, 'black', 'black')  # '#A2142F'
-                    #
-                    
+                                     
                     #  CQ10
-                    
                     add_curve(rocs['CQ'], '--', '.', 'red', 2, 16, 1.5, 'CQ10', 0.5) # '#63D312'
                     
                     if 'Hot' in rocs:
@@ -369,11 +343,11 @@ def main():
                         
                     
                         
-                    # Proposed Method 1: Thicker, bold color
+                    # Proposed Method 1 SRHT(Sigma): Thicker, bold color
                     if not true_iso or p > n or not nu == math.inf: #  suppress other method for Figure 4
                         add_curve(rocs['Bai'], '-', 'o', 'goldenrod', 3.5, 16, 2.5, r'\textbf{SRHT}$\boldsymbol{(\Sigma)}$', 0.8, 'None') 
                     
-                    # Proposed Method 2: Thicker line
+                    # Proposed Method 2 SRHT(I): Thicker line
                     add_curve(rocs['LR'], '-', 'x', 'm', 3.5, 16, 3, r'\textbf{SRHT(I)}', 0.8) 
                     
                     # Ledoit-Wolf (LW22)
@@ -394,29 +368,14 @@ def main():
                     ax.set_ylim([0, 1.05])
                     ax.tick_params(axis='y', labelsize=18)                    
                     if row == 0:
-                        # if num_rows == 0:
-                            # xlabel_str = r"(a)" if col == 0 else r"(b)" if col == 1 else r"(c)"
-                            # ax.set_xlabel(xlabel_str, fontsize=20)
-                        #if pow_idx != 0:
                         title_str = r"$\kappa(\boldsymbol{\Sigma}) = 10^{%d}$" % pow_idx
-                        #else:
-                            #title_str = r"$\kappa(\boldsymbol{\Sigma}) = 1$"
                         ax.set_title(title_str, fontsize=28, y=1.025)
-                        
-                    #if row == 1:
-                        # xlabel_str = r"(d)" if col == 0 else r"(e)" if col == 1 else r"(f)"                                                 
-                        # ax.set_xlabel(xlabel_str, fontsize=20)
-                        
-                    # if row == 2:
-                        # xlabel_str = r"(g)" if col ==0 else r"(h)" if col == 1 else r"(i)"
-                        # ax.set_xlabel(xlabel_str, fontsize=20)
                         
                     # Add row labels exclusively to the leftmost column
                     if col == 0 and num_rows != 1:
                         print(nu)
                         row_lbl = r"$t_{%d}$" % nu
                         row_lbl = 'None' if nu==math.inf else row_lbl
-                        #"sub-Gaussian data" if nu == math.inf else r"Student-$t$ data"                               
                         ax.set_ylabel(row_lbl, fontsize=34, labelpad=15, rotation=0, ha='right', va='center' )
                 
                                     
@@ -432,7 +391,7 @@ def main():
                 ax.set_box_aspect(1)
                 
         # Explicitly reserve top 5% (for titles) and bottom 12% (for legend)
-        fig.tight_layout() # (rect=[0, 0.12, 1, 0.95]) 
+        fig.tight_layout() 
         handles, labels = axes[0,0].get_legend_handles_labels()
 
         # Safely deduplicate by keeping the *first* occurrence (the proxy artist)
@@ -449,20 +408,12 @@ def main():
 
 
         mynu = 0 if nu==math.inf else nu
-        #filename_main = f'/Users/bnrbnsn/Downloads/latex/figures/CovShrink_Grid_Iso{true_iso}_nu{mynu}_nt{num_trials}_n{n}.png' 
-        #fig.savefig(filename_main, dpi=300, bbox_inches='tight', bbox_extra_artists=(leg,))
         filename_main = f'CovShrink_Grid_Iso{true_iso}_nu{mynu}_nt{num_trials}_n{n}.png'
         fig.savefig(filename_main, dpi=300, bbox_inches='tight', bbox_extra_artists=(leg,))
 
         print(f"Saved complete grid to: {filename_main}")
         plt.close(fig) # free memory
         
-        # Save the dedicated top row figure
-        #fig_top.tight_layout()
-        #filename_top = f'CovShrink_TopRow_TrueIso{true_iso}_n{n}.png'
-        #fig_top.savefig(filename_top, dpi=300, bbox_inches='tight')
-        #print(f"Saved top row figure to: {filename_top}")
-        #plt.close(fig_top)
     
     print(f"\nAll simulations completed in {time.time() - start_time:.1f} seconds.")
 

@@ -37,7 +37,7 @@ def generate_synthetic_crawdad():
 
 def preprocess_data(data_file='dataLinear.mat', motion_file='motionCode.mat', save_mat_files=False):
     """
-    Replicates preprocess.m behavior with high-precision arrays.
+    Preprocesses data with high-precision arrays.
     """
     script_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.getcwd()
     data_path = os.path.join(script_dir, data_file)
@@ -235,11 +235,6 @@ def main():
     train_sizes = [200, 250, 300]
     numTrials = 100 # formerly 1000***
     
-    # Switch to the 1x3 structure matched from EnergyDetectors06
-    # CHANGE THIS:
-    # fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(15, 4.5), squeeze=False)
-    
-    # TO THIS:
     fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(15, 5.7), squeeze=False)
     start_time = time.time()
     
@@ -260,8 +255,6 @@ def main():
             ax.plot(roc_data[2], roc_data[3], marker=marker, color=color, markersize=ms, 
                     markeredgewidth=mew, linestyle='None', alpha=alpha, markerfacecolor=mfc)
 
-        # Build curves with exact styling from EnergyDetectors06
-        # Build curves with exact styling from EnergyDetectors10
         ax.plot(rocs['DL'][0], rocs['DL'][0], 'k--', label='chance')
         add_curve(rocs['DL'], '--', 'v', '#0072BD', 2, 12, 1.5, 'LAPPW20', 0.8)
         add_curve(rocs['CWH'], '--', '^', '#D95319', 2, 12, 2, 'CWH11')
@@ -278,7 +271,7 @@ def main():
         
         # Ledoit-Wolf (LW22) - called a second time with 'None' for proper legend deduplication matching
         add_curve(rocs['LW'], 'None', '+', '#63D312', 3.25, 18, 3, 'LW22', 0.6)
-        # Apply specific EnergyDetectors06 log-axis formatting
+        # Apply log-axis formatting
         ax.set_xscale('log')
         ax.set_xlim([1e-3, 1])
         ax.set_xticks([1e-3, 1e-2, 1e-1, 1])
@@ -304,9 +297,6 @@ def main():
     filename_main = 'Crawdad_Activity_Detection_Results.png' 
     fig.savefig(filename_main, dpi=300, bbox_inches='tight', bbox_extra_artists=(leg,))
     print(f"Saved complete grid to: {filename_main}")
-
-    #filename_main = '/Users/bnrbnsn/Downloads/latex/figures/Crawdad_Activity_Detection_Results.png' #!!*** change back to local path
-    #fig.savefig(filename_main, dpi=300, bbox_inches='tight', bbox_extra_artists=(leg,))
 
 if __name__ == "__main__":
     main()

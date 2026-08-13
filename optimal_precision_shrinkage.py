@@ -3,6 +3,7 @@ import math
 
 def fopt(p, n, nz_lams, prior_type, hbar=None, xi=None):
     r"""
+    (Note: All references and notation in the comments below can be found in the Supplemental Material of https://arxiv.org/abs/2502.02006 )
     $\color{codepurple}\textbf{\text{Description}}$: Proposed nonlinear precision shrinkage estimator, generalized to the $\color{codegreen}p > n$ regime but also valid for $\color{codegreen}n < p$.  
     $\color{codepurple}\textbf{\text{Output}}$: (p x 1) array $\color{codegreen}f=\color{codepurple}f^o(\lambda_i)$ (f_opt) that approximately optimizes
     $\color{codegreen}\mathrm{tr}(f(\bS)\myOmega)^2/\tr(\bfr f(\bS) \myXi f(\bS))$ (appropriately scaled) in the limit as $\color{codegreen}n,p\to\infty$ and $\color{codegreen}p/n\to\phi$, where $\color{codegreen}\lambda_i$ are the eigenvalues of the sample covariance matrix $\color{codegreen}\bS$, in descending order.

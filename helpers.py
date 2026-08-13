@@ -36,13 +36,14 @@ def QIS(p, n, lams):
     """
     Ledoit-Wolf Quadratic Inverse Shrinkage (QIS) estimator.
     lams: sample eigenvalues sorted in ASCENDING order.
-    Returns optimally shrunk eigenvalues in ascending order.
+    Returns Frobenius-norm-optimal eigenvalues in ascending order.
+    Compare to https://github.com/oledoit/covShrinkage/blob/main/QIS.m
     """
     c = p / n
     h = min(c**2, 1/c**2)**0.35 / p**0.35
     invlambda = 1.0 / lams[max(0, p - n):p]
     
-    # Broadcast differences (equivalent to Matlab's Lj - Lj')
+    # Broadcast differences
     Lj_mat = np.broadcast_to(invlambda[None, :], (len(invlambda), len(invlambda)))
     Lj_i = invlambda[None, :] - invlambda[:, None]
     
@@ -59,7 +60,7 @@ def QIS(p, n, lams):
     return delta
     
 def compute_roc(scores_H0, scores_H1, num_pts=1000, num_markers=12):
-    """Replicates Matlab's sliding threshold ROC computation."""
+    """Implements a sliding threshold ROC computation."""
     # Fallback to prevent issues with empty arrays
     if len(scores_H0) == 0 or len(scores_H1) == 0:
         return np.array([0.0, 1.0]), np.array([0.0, 1.0]), np.array([0.0, 1.0]), np.array([0.0, 1.0])
@@ -79,7 +80,6 @@ def compute_roc(scores_H0, scores_H1, num_pts=1000, num_markers=12):
     fpr_markers = np.geomspace(1e-5, 1.0, num_markers)
     tpr_markers = np.interp(fpr_markers, fpr, tpr)   
     
-    # FIX: Downsample the curve using log-spaced FPR values instead of array indices!
     # This ensures the drawn line segments actually capture the log-scale details,
     # so the line perfectly intersects the interpolated markers.
     if len(fpr) > num_pts:
